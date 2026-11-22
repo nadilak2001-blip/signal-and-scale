@@ -1,7 +1,8 @@
 
-import {SITE_CONFIG} from '../config/siteConfig';
-
-export type AnalyticsConsentStatus = 'unset' | 'granted' | 'denied';
+export type AnalyticsConsentStatus =
+  | 'unset'
+  | 'granted'
+  | 'denied';
 
 export type GA4EventName =
   | 'page_view'
@@ -19,6 +20,7 @@ declare global {
 }
 
 const MEASUREMENT_ID = 'G-M6C4BMCYP1';
+const CONSENT_KEY = 'signal_scale_analytics_consent_v1';
 
 let initialized = false;
 let lastTrackedPageKey = '';
@@ -29,15 +31,30 @@ export function isConfiguredMeasurementId(
   return /^G-[A-Z0-9]{6,}$/i.test(id.trim());
 }
 
-// Compatibility with existing website components.
-// This version uses automatic analytics tracking.
 export function getAnalyticsConsent(): AnalyticsConsentStatus {
-  return 'granted';
+  if (typeof window === 'undefined') return 'unset';
+
+  try {
+    const value = localStorage.getItem(CONSENT_KEY);
+    if (value === 'granted' || value === 'denied') {
+      return value;
+    }
+  } catch {
+    // Storage may be unavailable.
+  }
+
+  return 'unset';
 }
 
 export function setAnalyticsConsent(
   status: 'granted' | 'denied'
 ): void {
+  try {
+    localStorage.setItem(CONSENT_KEY, status);
+  } catch {
+    // Storage may be unavailable.
+  }
+
   if (status === 'granted') {
     initializeGA4();
   }
@@ -46,7 +63,8 @@ export function setAnalyticsConsent(
 export function initializeGA4(): void {
   if (typeof window === 'undefined') return;
   if (initialized) return;
-  if (!isConfiguredMeasurementId(MEASUREMENT_ID)) return;
+  if (!isConfiguredMeasurementId()) return;
+  if (getAnalyticsConsent() !== 'granted') return;
 
   initialized = true;
 
@@ -59,17 +77,21 @@ export function initializeGA4(): void {
   window.gtag('js', new Date());
 
   window.gtag('config', MEASUREMENT_ID, {
-    send_page_view: true,
+    send_page_view: false,
     debug_mode: true,
   });
 
-  const script = document.createElement('script');
-  script.async = true;
-  script.src =
-    'https://www.googletagmanager.com/gtag/js?id=' +
-    MEASUREMENT_ID;
+  const existingScript = document.querySelector(
+    `script[src*="gtag/js?id=${MEASUREMENT_ID}"]`
+  );
 
-  document.head.appendChild(script);
+  if (!existingScript) {
+    const script = document.createElement('script');
+    script.async = true;
+    script.src =
+      `https://www.googletagmanager.com/gtag/js?id=${MEASUREMENT_ID}`;
+    document.head.appendChild(script);
+  }
 }
 
 function sendEvent(
@@ -77,6 +99,7 @@ function sendEvent(
   params: Record<string, string | number | boolean>
 ): void {
   if (typeof window === 'undefined') return;
+  if (getAnalyticsConsent() !== 'granted') return;
 
   initializeGA4();
 
@@ -90,6 +113,9 @@ export function trackPageView(
   routePath: string,
   pageTitle: string
 ): void {
+  if (typeof window === 'undefined') return;
+  if (getAnalyticsConsent() !== 'granted') return;
+
   const normalizedPath = routePath || '/';
   const key = `${normalizedPath}|${pageTitle}`;
 
@@ -97,16 +123,10 @@ export function trackPageView(
 
   lastTrackedPageKey = key;
 
-  // Initial page view is handled by gtag config.
-  // Track subsequent SPA navigation manually.
-  if (window.location.hash === '#/' &&
-      normalizedPath === '/') {
-    return;
-  }
-
   sendEvent('page_view', {
     page_path: normalizedPath,
     page_title: pageTitle,
+    page_location: window.location.href,
   });
 }
 
