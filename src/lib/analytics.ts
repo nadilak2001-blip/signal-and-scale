@@ -76,19 +76,17 @@ export function initializeGA4(): void {
   };
 
   window.gtag('consent', 'default', {
-    analytics_storage: 'granted',
-    ad_storage: 'denied',
-    ad_user_data: 'denied',
-    ad_personalization: 'denied',
-  });
+  analytics_storage: 'denied',
+  ad_storage: 'denied',
+  ad_user_data: 'denied',
+  ad_personalization: 'denied',
+});
 
-  window.gtag('js', new Date());
-  // Enable automatic page_view for GA4 connectivity testing
-  window.gtag('config', measurementId, {
-    send_page_view: true,
-    anonymize_ip: true,
-  });
+window.gtag('js', new Date());
 
+window.gtag('config', measurementId, {
+  send_page_view: true,
+});
   const script = document.createElement('script');
   script.async = true;
   script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`;
