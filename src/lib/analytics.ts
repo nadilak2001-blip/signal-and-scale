@@ -1,3 +1,4 @@
+
 import {SITE_CONFIG} from '../config/siteConfig';
 
 export type AnalyticsConsentStatus = 'unset' | 'granted' | 'denied';
@@ -10,9 +11,6 @@ export type GA4EventName =
   | 'contact_form_submit'
   | 'insight_to_service_click';
 
-const CONSENT_STORAGE_KEY = 'signal_scale_analytics_consent_v1';
-const PLACEHOLDER_ID = 'G-XXXXXXXXXX';
-
 declare global {
   interface Window {
     dataLayer?: unknown[];
@@ -20,39 +18,26 @@ declare global {
   }
 }
 
-let scriptInjected = false;
+const MEASUREMENT_ID = 'G-M6C4BMCYP1';
+
+let initialized = false;
 let lastTrackedPageKey = '';
 
-export function isConfiguredMeasurementId(id: string = SITE_CONFIG.ga4MeasurementId): boolean {
-  if (!id || id === PLACEHOLDER_ID) return false;
+export function isConfiguredMeasurementId(
+  id: string = MEASUREMENT_ID
+): boolean {
   return /^G-[A-Z0-9]{6,}$/i.test(id.trim());
 }
 
+// Compatibility with existing website components.
+// This version uses automatic analytics tracking.
 export function getAnalyticsConsent(): AnalyticsConsentStatus {
-  try {
-    const stored = window.localStorage.getItem(CONSENT_STORAGE_KEY);
-    if (stored === 'granted' || stored === 'denied') {
-      return stored;
-    }
-  } catch {
-    // Ignore storage access errors in restricted environments
-  }
-  return 'unset';
+  return 'granted';
 }
 
-export function setAnalyticsConsent(status: 'granted' | 'denied'): void {
-  try {
-    window.localStorage.setItem(CONSENT_STORAGE_KEY, status);
-  } catch {
-    // Ignore storage access errors
-  }
-
-  if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
-    window.gtag('consent', 'update', {
-      analytics_storage: status === 'granted' ? 'granted' : 'denied',
-    });
-  }
-
+export function setAnalyticsConsent(
+  status: 'granted' | 'denied'
+): void {
   if (status === 'granted') {
     initializeGA4();
   }
@@ -60,64 +45,64 @@ export function setAnalyticsConsent(status: 'granted' | 'denied'): void {
 
 export function initializeGA4(): void {
   if (typeof window === 'undefined') return;
+  if (initialized) return;
+  if (!isConfiguredMeasurementId(MEASUREMENT_ID)) return;
 
-    const measurementId = SITE_CONFIG.ga4MeasurementId.trim();
-
-  if (!isConfiguredMeasurementId(measurementId)) {
-    return;
-  }
-
-  if (scriptInjected) return;
-  scriptInjected = true;
+  initialized = true;
 
   window.dataLayer = window.dataLayer || [];
-  window.gtag = function gtag(...args: unknown[]) {
+
+  window.gtag = function (...args: unknown[]) {
     window.dataLayer?.push(args);
   };
 
-  window.gtag('consent', 'default', {
-  analytics_storage: 'denied',
-  ad_storage: 'denied',
-  ad_user_data: 'denied',
-  ad_personalization: 'denied',
-});
+  window.gtag('js', new Date());
 
-window.gtag('js', new Date());
+  window.gtag('config', MEASUREMENT_ID, {
+    send_page_view: true,
+    debug_mode: true,
+  });
 
-window.gtag('config', measurementId, {
-  send_page_view: true,
-  debug_mode: true,
-});
   const script = document.createElement('script');
   script.async = true;
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`;
+  script.src =
+    'https://www.googletagmanager.com/gtag/js?id=' +
+    MEASUREMENT_ID;
+
   document.head.appendChild(script);
 }
 
 function sendEvent(
   eventName: GA4EventName,
-  params: Record<string, string | number | boolean>,
+  params: Record<string, string | number | boolean>
 ): void {
   if (typeof window === 'undefined') return;
 
-    if (!isConfiguredMeasurementId()) {
-    return;
-  }
+  initializeGA4();
 
-  if (typeof window.gtag === 'function') {
-    window.gtag('event', eventName, params);
-  }
+  window.gtag?.('event', eventName, {
+    ...params,
+    send_to: MEASUREMENT_ID,
+  });
 }
 
-export function trackPageView(routePath: string, pageTitle: string): void {
+export function trackPageView(
+  routePath: string,
+  pageTitle: string
+): void {
   const normalizedPath = routePath || '/';
   const key = `${normalizedPath}|${pageTitle}`;
 
-  // Prevent duplicate page_view events on React re-renders or StrictMode double-mounts
-  if (lastTrackedPageKey === key) {
+  if (lastTrackedPageKey === key) return;
+
+  lastTrackedPageKey = key;
+
+  // Initial page view is handled by gtag config.
+  // Track subsequent SPA navigation manually.
+  if (window.location.hash === '#/' &&
+      normalizedPath === '/') {
     return;
   }
-  lastTrackedPageKey = key;
 
   sendEvent('page_view', {
     page_path: normalizedPath,
@@ -125,37 +110,46 @@ export function trackPageView(routePath: string, pageTitle: string): void {
   });
 }
 
-export function trackAuditRequestClick(ctaLocation: string): void {
+export function trackAuditRequestClick(
+  ctaLocation: string
+): void {
   sendEvent('audit_request_click', {
     cta_location: ctaLocation,
   });
 }
 
-export function trackServiceView(serviceId: string, serviceTitle: string): void {
+export function trackServiceView(
+  serviceId: string,
+  serviceTitle: string
+): void {
   sendEvent('service_view', {
     service_id: serviceId,
     service_name: serviceTitle,
   });
 }
 
-export function trackDiscoveryCallClick(ctaLocation: string): void {
+export function trackDiscoveryCallClick(
+  ctaLocation: string
+): void {
   sendEvent('discovery_call_click', {
     cta_location: ctaLocation,
   });
 }
 
-/**
- * Records a successful contact form submission using only non-PII categorical fields.
- * Never transmits names, email addresses, business names, or free-text messages.
- */
-export function trackContactFormSubmit(sector: string, primaryChallenge: string): void {
+export function trackContactFormSubmit(
+  sector: string,
+  primaryChallenge: string
+): void {
   sendEvent('contact_form_submit', {
     business_sector: sector,
     primary_challenge: primaryChallenge,
   });
 }
 
-export function trackInsightToServiceClick(guideSlug: string, targetService: string): void {
+export function trackInsightToServiceClick(
+  guideSlug: string,
+  targetService: string
+): void {
   sendEvent('insight_to_service_click', {
     insight_slug: guideSlug,
     target_service: targetService,
