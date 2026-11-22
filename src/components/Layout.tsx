@@ -6,8 +6,9 @@ import {SITE_CONFIG} from '../config/siteConfig';
 import {
   getAnalyticsConsent,
   isConfiguredMeasurementId,
-  setAnalyticsConsent,
+    setAnalyticsConsent,
   trackAuditRequestClick,
+  trackPageView,
   type AnalyticsConsentStatus,
 } from '../lib/analytics';
 
@@ -26,9 +27,19 @@ const SECONDARY_NAV = [
 
 export function Layout({children}: {children: ReactNode}) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [privacyPanelOpen, setPrivacyPanelOpen] = useState(false);
+    const [privacyPanelOpen, setPrivacyPanelOpen] = useState(
+    () => getAnalyticsConsent() === 'unset'
+  );
   const [consent, setConsent] = useState<AnalyticsConsentStatus>(() => getAnalyticsConsent());
   const location = useLocation();
+    useEffect(() => {
+    if (consent !== 'granted') return;
+
+    const pageTitle =
+      document.title || 'Signal & Scale';
+
+    trackPageView(location.pathname, pageTitle);
+  }, [location.pathname, consent]);
 
   useEffect(() => {
     setMobileOpen(false);
