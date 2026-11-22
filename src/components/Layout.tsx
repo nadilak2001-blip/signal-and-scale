@@ -52,7 +52,7 @@ export function Layout({children}: {children: ReactNode}) {
       }
     }
     window.scrollTo({top: 0, behavior: 'auto'});
-  }, [location.pathname, location.hash]);
+  }, [location.pathname, location.search, consent]);
 
   const handleConsentChange = (choice: 'granted' | 'denied') => {
     setAnalyticsConsent(choice);
