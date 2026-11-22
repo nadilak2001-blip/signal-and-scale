@@ -1,0 +1,5 @@
+# Replace the Sitemap URL with your published GitHub Pages or custom domain URL.
+User-agent: *
+Allow: /
+
+Sitemap: https://example.github.io/signal-and-scale/sitemap.xml
