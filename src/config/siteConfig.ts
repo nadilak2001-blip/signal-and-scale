@@ -30,7 +30,7 @@ export const SITE_CONFIG: SiteConfig = {
   brandName: 'Signal & Scale',
   tagline: 'Transforming business expertise into measurable digital growth.',
   regionLabel: 'Remote-first Australian B2B consultancy concept',
-  ga4MeasurementId: import.meta.env.VITE_GA4_MEASUREMENT_ID || 'G-XXXXXXXXXX',
+  ga4MeasurementId: import.meta.env.VITE_GA4_MEASUREMENT_ID || 'G-M6C4BMCYP1',
   contactFormEndpoint: import.meta.env.VITE_CONTACT_FORM_ENDPOINT || '',
   schedulingUrl: import.meta.env.VITE_SCHEDULING_URL || '',
   canonicalBaseUrl:
