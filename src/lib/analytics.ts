@@ -86,6 +86,7 @@ window.gtag('js', new Date());
 
 window.gtag('config', measurementId, {
   send_page_view: true,
+  debug_mode: true,
 });
   const script = document.createElement('script');
   script.async = true;
