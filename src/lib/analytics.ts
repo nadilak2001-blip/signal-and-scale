@@ -61,12 +61,9 @@ export function setAnalyticsConsent(status: 'granted' | 'denied'): void {
 export function initializeGA4(): void {
   if (typeof window === 'undefined') return;
 
-  const measurementId = SITE_CONFIG.ga4MeasurementId.trim();
-  const consent = getAnalyticsConsent();
+    const measurementId = SITE_CONFIG.ga4MeasurementId.trim();
 
-  // Only inject Google Analytics script when a real Measurement ID is configured
-  // AND the visitor has explicitly granted analytics consent.
-  if (!isConfiguredMeasurementId(measurementId) || consent !== 'granted') {
+  if (!isConfiguredMeasurementId(measurementId)) {
     return;
   }
 
@@ -104,8 +101,7 @@ function sendEvent(
 ): void {
   if (typeof window === 'undefined') return;
 
-  const consent = getAnalyticsConsent();
-  if (consent !== 'granted' || !isConfiguredMeasurementId()) {
+    if (!isConfiguredMeasurementId()) {
     return;
   }
 
