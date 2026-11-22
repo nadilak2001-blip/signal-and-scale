@@ -83,9 +83,9 @@ export function initializeGA4(): void {
   });
 
   window.gtag('js', new Date());
-  // Disable automatic page_view to prevent duplicate events with SPA routing
+  // Enable automatic page_view for GA4 connectivity testing
   window.gtag('config', measurementId, {
-    send_page_view: false,
+    send_page_view: true,
     anonymize_ip: true,
   });
 
